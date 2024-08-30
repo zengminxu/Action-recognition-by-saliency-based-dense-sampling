@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.8)
+project(action)
+find_package(OpenCV REQUIRED)
+list( APPEND CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x -fopenmp")
+add_executable(action ActionAnalysis.cpp TrainAndTest.cpp DenseTrackStab.cpp FisherVector.cpp)
+target_link_libraries(action ${OpenCV_LIBS} libvl.so -ldl)
+link_directories(${HOME}/tools/vlfeat-0.9.19/bin/glnxa64)

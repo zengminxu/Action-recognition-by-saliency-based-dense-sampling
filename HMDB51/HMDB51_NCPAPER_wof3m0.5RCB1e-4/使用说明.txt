@@ -1,0 +1,322 @@
+1.在DrawOpticalFlow.h上加入了专供idt使用的函数xzmOptIDTmap()，
+可以限制补idt时的特征点：只取warp_flow＞最小光流幅值的点给idt用；
+同时，在Descriptors.h的wofDenseSample()中加上了对xzmOptIDTmap()的调用。
+徐增敏
+20160306
+======================================================================
+1.在DenseTrackStab.cpp和Descriptors.h中增加了IDT-wofRCB补idt的代码。
+当IDT-wofRCB采样特征过少时，即特征数＜min_sample_ratio*IDT特征数时，在当前尺度下自动补全IDT。
+2.在Descriptors.h和DrawTracks.h中，修复了MBI、RC、RCB、wofRCB在画图和提特征时，遍历网格存特征点的代码错误！
+3.由于代码需要在点少时补IDT，所以在DenseTrackStab.cpp中补上了IDT轨迹的代码如下：
+list<Track>& tracks = xyScaleTracks[iScale];
+for (list<Track>::iterator iTrack = tracks.begin(); iTrack != tracks.end();) {
+......
+} // for iTrack
+只有这样才能使得IDT在wofDenseSamle()函数采样时，确保存在強角点的网格可以保持连续15帧不被新的強角点覆盖。
+也只有这样才能保证IDT-wofRCB补全IDT时不会被错误的IDT影响。否则IDT会在遍历视频帧相同网格时重复存入強角点。
+徐增敏
+20160228
+======================================================================
+1.开启Neurocomputing的wofRCB显著性采样测试识别效果，限定最小光流幅值为0.001；
+2.开启4倍形态学梯度变化wof4mRCB作为显著性采样测试识别效果，限定最小光流幅值为0.001；
+3.在DrawTracks.h增加了自动补全idt特征点的代码（即当iDT-wofRCB采样特征点数为零时，直接用idt作为iDT-wofRCB特征点）；
+4.尝试取消最小修正光流幅值的限制，且当iDT-RCB采样特征点过少时，在Neurocomputing画图时自动补idt特征点。
+徐增敏
+20160226
+======================================================================
+1.只使用最小光流幅值为0.001限定采样点，测试不用wofRCB显著边缘区域采样的效果。
+徐增敏
+20160224
+======================================================================
+1.根据高性能平台错误提示，发现linux写jpg文件有限制，不能用push_back(CV_IMWRITE_JPEG_QUALITY);，删除该语句后windows也能用
+2.按光流对比显著图修改IDT提取代码，在高性能平台上跑代码试效果。
+3.实现了修正光流场warp_flow + 全局对比显著度RCB = 光流对比显著图wofRCBmap，能精确消除相机抖动产生的噪声轨迹，准备冲SCI
+4.参考motionToColor()关于光流幅值与颜色饱和度之间的关系（即幅值越大颜色越深），修改了DrawOpticalFlow.h中xzmOptRCBmap()光流阈值代码
+5.文件夹ImprovedTrajSalRCB20151025_HybridProgramming用到了libFisher.dll、libGmm.dll等混合编码的动态链接库，而这些库在161服务器上生成的都是64位库文件，不能与RCB显著度32位库文件apclusterwin.dll同时使用。
+徐增敏
+20151228
+======================================================================
+1.增加了CAMHID论文的相机抖动描述符代码。
+2.修正了一个BUG：在DenseTrackStab.cpp和DrawTracks.h处理第一帧时，无意中多加了一行代码…… 
+grey.copyTo(prev_grey);  // 需要删除这行
+3.去掉了Descriptors.h 中void InitSalMask()的归一化函数normalize()。虽然normalize()函数可以减少一些噪声点，但由于掩码灰度值被归一化为[0，1]，所以必须用convertScaleAbs(salMask, salMask, 255, 0);通过第三个参数值将掩码灰度值放大到[0，255]！
+normalize(mask, mask, 1, 0, NORM_MINMAX);  // 使用归一化可以减少噪声点的干扰，mask取值范围为[0,1]
+convertScaleAbs(mask, mask, 255, 0);       // 使用线性变换浮点型数据转换成8位无符号整型，使mask范围变为[0,255]
+徐增敏
+20150905
+======================================================================
+1.在PCA白化和GMM训练之间，以及在新样本转换PCA白化特征空间和FV编码之间，加入了L2归一化改善欧氏距离的计算结果。
+根据李红阳的分析，这是猜想GMM码本训练和FV编码时都是用欧氏距离来进行计算的。
+2.修正了显著度灰度图的数据类型转换。将convertScaleAbs(mask, mask, 255, 0);改为mask.convertTo(mask, CV_8U);
+将浮点型数据转换成opencv标准的8位无符号整型；而convertScaleAbs(mask, mask, 1, 0);的含义是用线性变换将浮点型数据转换成8位无符号整型，
+第三个参数为放大尺度，指mask中每个元素的值乘以该尺度，这会造成mask掩码的元素值最高位被截断为255.
+3.恢复使用Hollywood2(不用autotrain、autotest)，要注意的是部分视频里包含2个不同的动作类别，所以训练和测试集总数超过1707。
+徐增敏
+20150901 
+======================================================================
+1.改进了部分视频IDT-RCB提取不出特征点的情况。
+即先用IDT采样，如果达到每段视频指定采样数的1/20，就改用IDT-RCB限制采样点。
+并在Initialize.h中加入了“-p”参数每段视频的指定采样特征数。
+2.修复了程明明GC显著图的二值化阈值，以灰度平均值取代OTSU函数，RC-map显著图更加稳定。
+3.修复了一些特别黑的视频用程明明GC提取不出显著图的问题。当程明明GC提取不出显著图时，令显著图全白为255，将IDT-RCB转为IDT采样。
+徐增敏
+20150826 
+======================================================================
+0.使用HMDB51_RCB_EXE时，应先在IDT-RCB/中执行make命令编译生成IDT-RCB/release/DenseTrackStab，
+再将该可执行文件和apclusterunix64.so拷贝到根目录的build/，然后在根目录的build/下执行cmake .. 和make，最终执行./bsMP
+1.将IDT-RCB提取特征的代码封装到单独的可执行文件中（提取特征速度极快！）。
+按照原版IDT改写了Makefile文件：在CXXFLAGS 中加入-Wno-deprecated -std=c++0x -fopenmp -ftree-vectorize ，
+并在LDFLAGS 中加入-fopenmp；而make文件夹直接拷贝无需修改。
+注意：gcc/g++编译器用的是-fopenmp参数，其他编译器如intel用的是-openmp，而pgi用的是-mp.
+2.在IDT-RCB文件夹中，在CmColorQua.cpp恢复使用openmp的语句“#pragma omp parallel for”，改写了for (int x = 0; x < cols; x++, imgData += 3)
+3.在IDT-RCB文件夹中，移除了getopt.h，但是在根目录中仍要保留getopt.h（给windows版本解析输入命令的参数）；
+4.在IDT-RCB文件夹中，在DenseTrackStab.cpp重新使用RCB-map取代HD参与单应性矩阵计算，重新计算libsvm的识别效果；
+5.在根目录中，删除了DrawTracks.h、CmSaliencyGC.h 和 CmSaliencyGC.cpp，并在DenseTrackStab.cpp中移除了两个头文件DrawTracks.h 和 CmSaliencyGC.h。
+6.在IDT-RCB文件夹 和根目录的Descriptors.h中，LoadBoundBox()函数稍有不同。
+
+徐增敏
+20150822
+======================================================================
+
+1.修正了UCF50缺少g26及以上bb_file的问题；
+2.恢复使用HD，因为RCB-map取代HD参与单应性矩阵计算后，似乎的libsvm识别效果变差了？
+
+徐增敏
+20150820
+======================================================================
+
+1.新建DrawTracks.h专门处理画图函数。例如，将DenseTrack.cpp 的子线程drawImageMultiThread() 放入其中；
+注意：由于画图时用到的RC-map/RCB-map掩码，只是显示显著度掩码灰度图效果，而不需要用RANSAC计算两帧之间的单应性矩阵，
+因此在子线程drawImageMultiThread() 中，仍然沿用了行人检测器HD。（原则上应该去除HD使得代码风格与特征提取一致）
+2.在新建的DrawTracks.h 放入myDrawImage()，每类动作随机取sampleNum段视频的8个图；
+3.在新建的DrawTracks.h 放入imshowMany()，清空Descriptors.h 的画图函数；
+4.在Descriptors.h 上增加了两个xzmDenseSample()函数，分别处理画8个图时帧数>=15和帧数<15的情况。
+小心：头文件之间不能相互引用，否则会报错！比如新建DrawTracks.h与Descriptors.h相互引用头文件时，Descriptors.h会报错。
+而cpp文件甚至可以引用cpp.... 但这样不规范。
+5.按MMM2016论文命名方式更新了代码中有关RC-map/RCB-map/MBI的变量名，更容易理解论文和代码；
+6.按统一IDT特征格式修改了featurePath有关代码，使之路径变为：features/当前类/；
+并在BrowseDir.h中增加了新建特征路径“features/当前类/”的代码；
+7.统一IDT特征的间隔符为"\t"，取消旧的间隔符（空格" "）。
+8.增加了descriptorType、manifoldType参数，其中descriptorType参数“d-Fusion”为描述子融合，
+“r-Fusion”为多通道表达层融合（需要多线程同时训练HOG/HOF/MBHx/MBHy码本）；
+manifoldType参数指特征预处理中的降维流形结构，其中“raw”表示不做预处理的396维HOG+HOF+MBH原始IDT特征，
+“pca”表示用PCA白化做特征预处理，“LLE”表示用局部线性嵌入做特征预处理。
+9.使用多线程改写了FisherVector.cpp的trainGMM()函数，结合第8点的两个新增参数可兼容单码本训练和多通道码本训练。
+
+徐增敏
+20150817
+======================================================================
+1.在DenseTrack.cpp 上修正了处理第一帧的代码的参数错误…… 
+	cvtColor(image, grey, CV_BGR2GRAY); 
+第二个参数按IDT原版要求应改为prev_grey，否则提取的特征会在第15帧出现错误轨迹（详见为知笔记）
+	cvtColor(image, prev_grey, CV_BGR2GRAY);
+2.在DenseTrack.cpp 上用RC-map/RCB-map的掩码，取代了行人检测器HD；
+在Descriptors.h 上用InitSalMask(salMask); 将显著度掩码转为opencv默认的0,1掩码格式，
+其中opencv 默认掩码有目标的像素坐标其掩码值为0，没有目标的坐标位置其掩码值为1。
+如果不改为opencv默认格式将提示以下错误：
+OpenCV Error: Assertion failed (mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size())) in detect, file /dawnfs/users/xuzengmin/tmp/opencv-2.4.9/modules/features2d/src/detectors.cpp, line 63
+terminate called after throwing an instance of 'cv::Exception'
+  what():  /dawnfs/users/xuzengmin/tmp/opencv-2.4.9/modules/features2d/src/detectors.cpp:63: error: (-215) mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()) in function detect
+3.将以下语句从DenseSample() 和xzmDenseSample()中屏蔽，并改在InitSalMask()中实现：
+	// 使用归一化可以减少噪声点的干扰
+	normalize(mask, mask, 1, 0, NORM_MINMAX);  
+	// 使用线性变换将显著度掩码矩阵mask转成8位无符号整型的灰度图像，然后才用阈值操作得到二值化图像
+	convertScaleAbs(mask, mask, 1, 0);	
+	cv::threshold(mask, mask, 0, 255, THRESH_BINARY|THRESH_OTSU); // xzm20150815 用0尺度的salMask取代行人检测器
+	// elemKernel：定义的结构元素
+	Mat elemKernel(5,5,CV_8U,Scalar(1));// MORPH_GRADIENT：对图像进行2次梯度运算，即膨胀减去腐蚀
+	cv::morphologyEx(mask, mask, MORPH_GRADIENT, elemKernel, Point(-1,-1), 2);
+4.由于InitSalMask()将程明明显著度掩码变成了opencv默认的0,1格式，所以在DenseSample() 和xzmDenseSample()中将
+	if(eig.at<float>(y,x) > threshold && salMask.at<uchar>(y,x))
+改为
+	if(eig.at<float>(y,x) > threshold && salMask.at<uchar>(y,x) == 0 )
+5.在FisherVector.cpp的readFeaturesFormEachAction()子线程中，使用了opencv的随机数生成器RNG
+	RNG rng(getTickCount());	// 取当前系统时间作为随机数种子，令rand()产生[0,32767)之间的随机数
+	Mat randMat(tmpMat.rows, 1, CV_32S);
+	for(int r=0; r<randMat.rows; r++)
+		randMat.at<int>(r,0) = r;
+	randShuffle(randMat, 1, &rng);
+
+徐增敏
+20150815
+
+======================================================================
+
+0.用 myDrawTrack() 和 DrawManyTrack() 实现了在视频上画出IDT轨迹的方法。
+
+1.将陈华锋的画图方法加了进来，清晰看到8个图的对比情况，8张图分别为：
+原图、RC-map(程明明显著图)、RCB-map(加了2次形态学梯度的ISal显著边界图)、MBI(彭小江)、IDT、IDT-RC、IDT-RCB、IDT-MBI
+
+2.程明明显著图用了第三方插件，该插件在WIN32和LINUX64上实验通过，但不能在VS2010的配置管理器中改为X64运行。
+
+3.修正了
+例如：在void CmSaliencyGC::GetCSD(vecD &_csd, vecD &_cD)上残留了
+if(_NUM < 2) // xzm20150418
+	return;	
+以上两行代码需要去掉（注释掉）。
+
+4.在FisherVector.cpp的featuresFisherQuantization()里，
+在时间轴上进行了单尺度的稠密子时空卷采样，
+但是还没有对单尺度的稠密子时空卷（作为新的特征）进行第二次训练码本和编码量化。
+
+5.修正了UCF50在特征提取时缺失的行人目标框bb_file，这直接影响到两帧之间单应性矩阵的计算精度。
+因为排除了行人目标框的区域后，用两帧之间的SURF和Harris点对，进行RANSAC计算单应性矩阵的。
+该单应性矩阵可以将光流场进行二次旋转校正，使得光流场的精度更高。
+
+徐增敏
+20150727
+
+======================================================================
+
+1.将彭小江的MBI和程明明的显著度结合起来，同时用作掩码排除相机抖动产生噪声点的干扰，
+通过归一化、转换灰度图、二值化、膨胀腐蚀的梯度运算，实现了程明明显著度掩码的强化。
+	// 使用归一化可以减少噪声点的干扰
+	normalize(salMask, salMask, 1, 0, NORM_MINMAX);  
+	// 使用线性变换将显著度掩码矩阵salMask转成8位无符号整型的灰度图像，然后才用阈值操作得到二值化图像
+	convertScaleAbs(salMask, salMask, 255, 0);	
+	cv::threshold(salMask, salMask, 0, 255, THRESH_BINARY|THRESH_OTSU);
+	// elemKernel：定义的结构元素
+	Mat elemKernel(5,5,CV_8U,Scalar(1));// MORPH_GRADIENT：对图像进行2次梯度运算，即膨胀减去腐蚀
+	cv::morphologyEx(salMask, salMask, MORPH_GRADIENT, elemKernel, Point(-1,-1), 2);
+2.用imshowMany()函数实现了多图同时显示图像的效果，修改了waitKey(0)的等待时间（注：0表示一直等，其他数字为毫秒）。
+	vector<Mat> manyMat; manyMat.push_back(MBI); manyMat.push_back(salMask);
+	imshowMany("showManyImg", manyMat);	manyMat.clear();
+3.实验发现MBI无法处理相机抖动的噪声点轨迹，而程明明的显著度可以抵抗相机抖动的干扰，如HMDB51的骑自行车1989_Tour_de_France_Final_Time_Trial_ride_bike_f_cm_np1_ba_med_1.avi；
+但是，程明明的显著度不能用于背景复杂的动作场景，而彭小江的MBI可以抵抗复杂场景的干扰，如UCF SPORTS的第二个骑马视频4456-16_700165.avi，所以这两种方法是互补的。
+
+徐增敏
+20150407
+
+======================================================================
+
+1.修改了CmSaliencyGC.cpp的XZM()函数，令生成的显著度矩阵作为掩码参数输出！
+如果程明明的代码找不到当前帧的显著度，就令掩码矩阵全赋值为255，表示整幅图像都显著。
+2.修改了DenseTrack.cpp的提取特征代码，在featuresMultiThreadProcess()回调函数中重新启用一次过计算光流的方式，
+不再对前2帧单独处理，也不用在第二帧后单独分尺度计算光流场。并在DenseSample和pxjDenseSample函数中加入了显著度掩码参数。
+3.删除了OpticalFlow.h的自定义函数（原针对单独分尺度计算光流场的函数），删除后该文件（即OpticalFlow.h）跟Wangheng的一致了。
+4.修改了Descriptors.h的DenseSample和pxjDenseSample函数，在其中都加入以下代码：
+convertScaleAbs(salMask, salMask, 255, 0);	
+cv::threshold(salMask, salMask, 100, 255, THRESH_BINARY|THRESH_OTSU);
+使用线性变换将显著度掩码矩阵salMask转成8位无符号整型的灰度图像，然后才用阈值操作得到二值化图像
+而且，在判断强角点时加入显著度掩码进行判断（即 && salMask.at<uchar>(y,x)），如下所示：
+if(eig.at<float>(y,x) > threshold && temp8u.at<uchar>(y,x) && salMask.at<uchar>(y,x))
+以此减少噪声采样点的干扰。
+5.其他DenseTrack.cpp修改代码的细节如下：
+① std::vector<Mat> salMask_pyr(0); // 增加一个显著度掩码容器，存放显著度掩码矩阵缩放尺度后的图像金字塔
+
+② if(iScale == 0){
+	grey.copyTo(grey_pyr[0]);
+	salMask.copyTo(salMask_pyr[0]);
+}
+else{					// 通过线性插值构建图像金字塔
+	resize(grey_pyr[iScale-1], grey_pyr[iScale], grey_pyr[iScale].size(), 0, 0, INTER_LINEAR);
+	resize(salMask_pyr[iScale-1], salMask_pyr[iScale], salMask_pyr[iScale].size(), 0, 0, INTER_LINEAR);
+}
+6.①SA-k的函数里都少写了三行sumDis = 0
+②SA-k的最大池化代码有误！因为最大池化是指一行特征在码本的某一个bin上取最大值，而不是在k个近邻bin上取最大值
+需要将以下两行代码
+    if(maxPooling[2] < tmpDis/sumDis)
+        maxPooling[2] = tmpDis/sumDis;
+修改为
+    if(code.at<Vec3f>(0, forward.trainIdx)[2] < tmpDis/sumDis)
+       code.at<Vec3f>(0, forward.trainIdx)[2] = tmpDis/sumDis;
+
+徐增敏
+20150403
+
+======================================================================
+
+1.扩展内存范围训练GMM！将VS2010工具栏上的配置管理器从win32改为x64，
+解决 模块计算机类型“X86”与目标计算机类型“x64”冲突 的问题。
+在SaliencyICCV12项目属性-〉VC++目录的包含目录中，更换为
+D:\XZM\vlfeat-0.9.18\vl;C:\opencv\build\include;C:\opencv\build\include\opencv2;C:\opencv\build\include\opencv;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(IncludePath)
+同时，在项目属性-〉VC++目录的库目录中，更换为
+D:\XZM\vlfeat-0.9.18\bin\win64;C:\opencv\build\x64\vc10\lib;$(LibraryPath)
+2.在CmLib项目属性-〉VC++目录的包含目录中，更换为
+D:\XZM\vlfeat-0.9.18\vl;C:\opencv\build\include;C:\opencv\build\include\opencv2;C:\opencv\build\include\opencv;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(IncludePath)
+3.将代码放到161服务器上运行，因为第1步转成X64平台后，需要在64位的操作系统上运行程序。
+通过cmd命令systeminfo查看，发现HP的机器系统类型为：X86-based PC，虽然VS2010能生成成功但无法运行，提示错误：
+Visual Studio的32为版本无法调试64为进程或64为转储
+4.将项目文件夹改名为DenseTrajSalMBIFisher20150327_KTH.
+5.在SaliencyICCV13工程属性->配置属性->C/C++->常规->附加包含目录，将D:\XZM\DenseTrajectory_PXJXZMCMM\SaliencyICCV13
+改为D:\XZM\DenseTrajSalMBIFisher20150327_KTH\SaliencyICCV13。
+
+徐增敏
+20150329
+
+======================================================================
+
+1.拷贝一份工程文件夹SaliencyICCV2013，改名为DenseTrajSalMBI20150108_KTH.
+2.将已有的工程文件夹DenseTrajectory_PXJ，从D:\XZM\DenseTrajectory_PXJ\DenseTrajectory中拷贝代码到
+D:\XZM\DenseTrajectory_PXJXZMCMM\SaliencyICCV13
+3.去掉了CmLib和SaliencyICCV13的stdfax.h，删除了SaliencyICCV13Main.cpp.
+4.去掉了SaliencyICCV13工程属性->配置属性->C/C++->常规->附加包含目录
+5.解决读取库的问题：
+LoadLibrary() failed: 126.
+GetProcAddress() failed: 127.
+从http://www.psi.toronto.edu/index.php?q=affinity%20propagation 下载 apcluster_win32.zip，
+将apclusterwin.dll文件放入D:\XZM\DenseTrajSalMBI20150108_KTH\Debug。
+
+徐增敏
+20150108
+
+======================================================================
+
+1.拷贝一份工程文件夹SaliencyICCV2013，改名为DenseTrajectory_PXJXZMCMM.
+2.将已有的工程文件夹DenseTrajectory_PXJ，从D:\XZM\DenseTrajectory_PXJ\DenseTrajectory中拷贝代码到
+D:\XZM\DenseTrajectory_PXJXZMCMM\SaliencyICCV13
+3.在SaliencyICCV13工程属性->配置属性->C/C++->常规->附加包含目录，加入D:\XZM\DenseTrajectory_PXJXZMCMM\SaliencyICCV13
+4.在SaliencyICCV13工程属性->配置属性->调试->命令参数，加入person01.avi 
+5.在DenseTrack.cpp中引入2个头文件:
+#include "stdafx.h"
+#include "CmSaliencyGC.h"
+6.将SaliencyICCV13Main.cpp的主函数注释掉.
+
+徐增敏
+20150107
+
+======================================================================
+
+1.新建空白项目：Win32控制台应用程序，命名为SaliencyICCV2013.
+2.拷贝程明明VS2012版本下的2个文件夹SaliencyICCV13和CmLib，粘贴到新建的空白项目文件夹下
+3.在空白项目SaliencyICCV2013中，从刚拷贝的SaliencyICCV13文件夹中，添加五个现有项：CmSaliencyGC.cpp等...
+4.在SaliencyICCV2013项目中，属性->配置属性->VC++目录中，往包含目录和库目录中加入opencv路径
+C:\opencv\build\include;C:\opencv\build\include\opencv2;C:\opencv\build\include\opencv;
+C:\opencv\build\x86\vc10\lib;
+5.执行“生成解决方案”，会提示出错.
+
+6.在该项目中添加2个现有项目：SaliencyICCV13和CmLib，将CmLib的属性->配置属性->常规->配置类型改为静态库(.lib)
+7.并删除原有项目SaliencyICCV2013.
+8.在SaliencyICCV13和CmLib的属性->配置属性->常规中，将平台工具集改为v100.
+9.在SaliencyICCV13和CmLib项目中，从属性->配置属性->VC++目录->包含目录和库目录中加入opencv路径
+C:\opencv\build\include;C:\opencv\build\include\opencv2;C:\opencv\build\include\opencv;
+C:\opencv\build\x86\vc10\lib;
+10.生成成功！
+
+徐增敏
+20150105
+
+======================================================================
+
+1.在SaliencyICCV13和CmLib的属性->配置属性->常规中，将平台工具集改为v100；
+
+2.在以上两个工程的属性->配置属性->VC++目录中，往包含目录和库目录中加入opencv路径；
+
+3.关于stdafx.h中需要引入的头文件<SDKDDKVer.h>和<stdio.h>，VS2010对应的路径分别为
+D:\Program Files\Microsoft SDKs\Windows\v7.0A\Include;
+D:\Program Files\Microsoft Visual Studio 10.0\VC\include;
+因此，需要在SaliencyICCV13工程的属性->配置属性->VC++目录->包含目录中添加这两个路径。
+
+4.关于CmInclude.h中的头文件<random>和<atlstr.h>，VS2010对应的路径分别为
+D:\Program Files\Microsoft Visual Studio 10.0\VC\include;
+D:\Program Files\Microsoft Visual Studio 10.0\VC\atlmfc\include;
+因此，需要在SaliencyICCV13工程的属性->配置属性->VC++目录->包含目录中添加这两个路径。
+
+5.Kernel32.Lib，需要在SaliencyICCV13工程的属性->配置属性->VC++目录->库目录中，添加
+Kernel32.Lib，D:\Program Files\Microsoft SDK\Lib
+msvcprtd.lib，D:\Program Files\Microsoft Visual Studio\VC98\Lib
+(这个路径……，D:\Program Files\Microsoft Visual Studio 10.0\VC\lib)
+atlsd.lib，D:\Program Files\Microsoft Visual Studio 10.0\VC\atlmfc\lib
+vcompd.lib，D:\Program Files\Microsoft Visual Studio 10.0\VC\lib
+
+备注：默认的配置文件Microsoft.Cpp.Win32.user.props 在D:\Users\yuwei\AppData\Local\Microsoft\MSBuild\v4.0

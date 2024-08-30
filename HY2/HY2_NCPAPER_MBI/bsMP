@@ -1,0 +1,1 @@
+bsub -J NCPAPER -q SugonC_12_JSJ_Linux -o %J-LOG.log -e %J-ERR.log -n 10 ./action

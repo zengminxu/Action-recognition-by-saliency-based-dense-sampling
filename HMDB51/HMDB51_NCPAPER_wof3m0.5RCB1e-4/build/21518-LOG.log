@@ -1,0 +1,58 @@
+Sender: LSF System <lsfadmin@node015>
+Subject: Job 21518: <51w3m0.2Re-2> Done
+
+Job <51w3m0.2Re-2> was submitted from host <node100> by user <xuzengmin> in cluster <hpc>.
+Job was executed on host(s) <24*node015>, in queue <SugonC_12_JSJ_Linux>, as user <xuzengmin> in cluster <hpc>.
+</dawnfs/users/xuzengmin> was used as the home directory.
+</dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/build> was used as the working directory.
+Started at Sat Mar 12 20:18:24 2016
+Results reported at Sat Mar 12 20:27:52 2016
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+./action
+------------------------------------------------------------
+
+Successfully completed.
+
+LSF could not use a single processor to bind all jobs when the binding option is set to PACK.LSF tried to use as few processors as possible when binding job <51w3m0.2Re-2>.
+
+Resource usage summary:
+
+    CPU time   :   2226.79 sec.
+    Max Memory :      1088 MB
+    Max Swap   :      1972 MB
+
+    Max Processes  :         3
+    Max Threads    :       254
+
+The output (if any) follows:
+
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/brush_hair/Brushing_hair__the_right_way_brush_hair_u_nm_np1_fr_goo_2.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/clap/#20_Rhythm_clap_u_nm_np1_le_goo_3.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/climb_stairs/Running_Up_Stairs_climb_stairs_l_nm_np1_ba_med_1.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/hug/-_FREE_HUGS_-_Abrazos_Gratis_www_abrazosgratis_org_hug_u_cm_np2_ba_goo_8.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/dive/Bridge_diving_in_Mostar_dive_f_cm_np2_fr_bad_4.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/pick/#122_Cleaning_Up_The_Beach_In_Chiba__Japan_pick_f_nm_np1_fr_bad_1.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/pour/New_Orleans__best_cocktails-_Hot_Buttered_Rum_pour_u_nm_np1_fr_med_0.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/pushup/100_push_ups_by_a_GIRL!!!_pushup_f_nm_np1_fr_goo_2.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/walk/50_FIRST_DATES_walk_f_nm_np1_ri_med_5.bin....
+extract features /dawnfs/users/xuzengmin/code/HMDB51_wof3m0.5RCB1e-4_NCPAPER/features/ride_horse/Alifestyle_ride_horse_f_cm_np1_le_med_5.bin....
+Brushing_hair__the_right_way_brush_hair_u_nm_np1_fr_goo_2 idts:17423
+#20_Rhythm_clap_u_nm_np1_le_goo_3 idts:3465
+Running_Up_Stairs_climb_stairs_l_nm_np1_ba_med_1 idts:966
+Bridge_diving_in_Mostar_dive_f_cm_np2_fr_bad_4 idts:15336
+-_FREE_HUGS_-_Abrazos_Gratis_www_abrazosgratis_org_hug_u_cm_np2_ba_goo_8 idts:3076
+#122_Cleaning_Up_The_Beach_In_Chiba__Japan_pick_f_nm_np1_fr_bad_1 idts:1042
+New_Orleans__best_cocktails-_Hot_Buttered_Rum_pour_u_nm_np1_fr_med_0 idts:1489
+100_push_ups_by_a_GIRL!!!_pushup_f_nm_np1_fr_goo_2 idts:9681
+Alifestyle_ride_horse_f_cm_np1_le_med_5 idts:26453
+50_FIRST_DATES_walk_f_nm_np1_ri_med_5 idts:1043
+
+
+PS:
+
+Read file <21518-ERR.log> for stderr output of this job.
+
